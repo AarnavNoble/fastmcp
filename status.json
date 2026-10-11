@@ -1,7 +1,7 @@
 {
   "schema": "fastmcp-maintenance/1",
   "publisher": "fastmcp-actions",
-  "as_of": "2026-10-11T13:11:52Z",
+  "as_of": "2026-10-11T21:11:14Z",
   "automations": [
     {
       "id": "issue-link-gate",
@@ -10,12 +10,12 @@
       "cadence": "on each external PR change and each issue assignment",
       "runs_on": "github-actions",
       "state": "ok",
-      "last_ok_day": "2026-10-10",
+      "last_ok_day": null,
       "evidence_url": "https://github.com/PrefectHQ/fastmcp/actions/workflows/require-issue-link.yml",
       "window": "7d",
       "counts": {
         "passed": 82,
-        "blocked": 93
+        "blocked": 97
       },
       "daily": [
         {
@@ -58,7 +58,7 @@
           "day": "2026-10-11",
           "succeeded": 0,
           "failed": 0,
-          "blocked": 5
+          "blocked": 9
         }
       ]
     },
@@ -73,7 +73,7 @@
       "evidence_url": "https://github.com/PrefectHQ/fastmcp/actions/workflows/marvin-label-triage.yml",
       "window": "7d",
       "counts": {
-        "succeeded": 195,
+        "succeeded": 196,
         "failed": 0
       },
       "daily": [
@@ -115,7 +115,7 @@
         },
         {
           "day": "2026-10-11",
-          "succeeded": 4,
+          "succeeded": 5,
           "failed": 0,
           "blocked": 0
         }
@@ -647,13 +647,13 @@
           "number": 5195,
           "title": "Fix TokenCache handling for expired access tokens",
           "url": "https://github.com/PrefectHQ/fastmcp/pull/5195",
-          "age_days": 19
+          "age_days": 20
         },
         {
           "number": 5234,
           "title": "fix(json-schema): apply a Draft-4 boolean exclusive bound to its sibling",
           "url": "https://github.com/PrefectHQ/fastmcp/pull/5234",
-          "age_days": 17
+          "age_days": 18
         }
       ],
       "id": "contributor-queue",
@@ -712,7 +712,7 @@
   "attention": {
     "schema": "fastmcp-attention/1",
     "repo": "PrefectHQ/fastmcp",
-    "as_of": "2026-10-11T13:10:31.846268+00:00",
+    "as_of": "2026-10-11T21:09:45.421628+00:00",
     "profile": "public-issue-signals",
     "judge": "jev",
     "assessment_model": "jev:jev-latest",
@@ -3057,6 +3057,94 @@
         "linked_prs": []
       },
       {
+        "number": 5652,
+        "title": "Adopt mcp 2.3's `get_tool_input_schema` hook: every 2026-07-28 `tools/call` with arguments still runs a full middleware-wrapped `tools/list`",
+        "url": "https://github.com/PrefectHQ/fastmcp/issues/5652",
+        "updated_at": "2026-10-11T08:44:32+00:00",
+        "score": 9.49,
+        "kind": "bug",
+        "judged": true,
+        "assessment": {
+          "kind": {
+            "bug": 0.97,
+            "regression": 0.03,
+            "feature": 0.0,
+            "question": 0.0,
+            "docs": 0.0,
+            "other": 0.0
+          },
+          "repro": 0.97,
+          "actionable": 1.0,
+          "severity": 0.5366666666666667,
+          "security": 0.12,
+          "spec": 0.65,
+          "downstream": 0.18
+        },
+        "input_digest": "eb3f6da01f940caaef1ddf52a02df528808ea259318f12d63bb13cab1f563430",
+        "reasons": [
+          {
+            "signal": "regression",
+            "text": "possible regression",
+            "contribution": 2.27
+          },
+          {
+            "signal": "severity",
+            "text": "potential impact",
+            "contribution": 1.61
+          },
+          {
+            "signal": "neglect",
+            "text": "awaiting maintainer reply",
+            "contribution": 1.5
+          },
+          {
+            "signal": "handled",
+            "text": "assigned or linked to a fix",
+            "contribution": -1.5
+          },
+          {
+            "signal": "repro",
+            "text": "reproduction provided",
+            "contribution": 1.46
+          },
+          {
+            "signal": "release_proximity",
+            "text": "reported near a relevant release",
+            "contribution": 1.4
+          },
+          {
+            "signal": "actionable",
+            "text": "actionable report",
+            "contribution": 1.0
+          },
+          {
+            "signal": "spec",
+            "text": "protocol conformance",
+            "contribution": 0.65
+          },
+          {
+            "signal": "security",
+            "text": "security-sensitive report",
+            "contribution": 0.48
+          },
+          {
+            "signal": "engagement",
+            "text": "community engagement",
+            "contribution": 0.36
+          },
+          {
+            "signal": "downstream",
+            "text": "downstream integration affected",
+            "contribution": 0.27
+          }
+        ],
+        "maintainer_replied": false,
+        "assigned": false,
+        "linked_prs": [
+          5666
+        ]
+      },
+      {
         "number": 5474,
         "title": "Namespaced mounts list non-hierarchical resource URIs but cannot read them",
         "url": "https://github.com/PrefectHQ/fastmcp/issues/5474",
@@ -5065,89 +5153,6 @@
         "maintainer_replied": false,
         "assigned": false,
         "linked_prs": []
-      },
-      {
-        "number": 5652,
-        "title": "Adopt mcp 2.3's `get_tool_input_schema` hook: every 2026-07-28 `tools/call` with arguments still runs a full middleware-wrapped `tools/list`",
-        "url": "https://github.com/PrefectHQ/fastmcp/issues/5652",
-        "updated_at": "2026-10-11T08:44:32+00:00",
-        "score": 7.99,
-        "kind": "bug",
-        "judged": true,
-        "assessment": {
-          "kind": {
-            "bug": 0.97,
-            "regression": 0.03,
-            "feature": 0.0,
-            "question": 0.0,
-            "docs": 0.0,
-            "other": 0.0
-          },
-          "repro": 0.97,
-          "actionable": 1.0,
-          "severity": 0.5366666666666667,
-          "security": 0.12,
-          "spec": 0.65,
-          "downstream": 0.18
-        },
-        "input_digest": "eb3f6da01f940caaef1ddf52a02df528808ea259318f12d63bb13cab1f563430",
-        "reasons": [
-          {
-            "signal": "regression",
-            "text": "possible regression",
-            "contribution": 2.27
-          },
-          {
-            "signal": "severity",
-            "text": "potential impact",
-            "contribution": 1.61
-          },
-          {
-            "signal": "handled",
-            "text": "assigned or linked to a fix",
-            "contribution": -1.5
-          },
-          {
-            "signal": "repro",
-            "text": "reproduction provided",
-            "contribution": 1.46
-          },
-          {
-            "signal": "release_proximity",
-            "text": "reported near a relevant release",
-            "contribution": 1.4
-          },
-          {
-            "signal": "actionable",
-            "text": "actionable report",
-            "contribution": 1.0
-          },
-          {
-            "signal": "spec",
-            "text": "protocol conformance",
-            "contribution": 0.65
-          },
-          {
-            "signal": "security",
-            "text": "security-sensitive report",
-            "contribution": 0.48
-          },
-          {
-            "signal": "engagement",
-            "text": "community engagement",
-            "contribution": 0.36
-          },
-          {
-            "signal": "downstream",
-            "text": "downstream integration affected",
-            "contribution": 0.27
-          }
-        ],
-        "maintainer_replied": false,
-        "assigned": false,
-        "linked_prs": [
-          5666
-        ]
       },
       {
         "number": 4161,
@@ -15306,6 +15311,87 @@
         "linked_prs": []
       },
       {
+        "number": 5648,
+        "title": "Supported way to serve one server's lifespan to several HTTP apps with different auth providers",
+        "url": "https://github.com/PrefectHQ/fastmcp/issues/5648",
+        "updated_at": "2026-10-09T14:47:56+00:00",
+        "score": 3.95,
+        "kind": "feature",
+        "judged": true,
+        "assessment": {
+          "kind": {
+            "bug": 0.0,
+            "regression": 0.0,
+            "feature": 1.0,
+            "question": 0.0,
+            "docs": 0.0,
+            "other": 0.0
+          },
+          "repro": 0.11,
+          "actionable": 0.995,
+          "severity": 0.5766666666666667,
+          "security": 0.06,
+          "spec": 0.07,
+          "downstream": 0.36
+        },
+        "input_digest": "64f87226c947bc0bf8b5ddf590f4a0c18d23c8f70ec11dc6d399decc3aa86776",
+        "reasons": [
+          {
+            "signal": "severity",
+            "text": "potential impact",
+            "contribution": 1.73
+          },
+          {
+            "signal": "neglect",
+            "text": "awaiting maintainer reply",
+            "contribution": 1.5
+          },
+          {
+            "signal": "feature_label",
+            "text": "enhancement label",
+            "contribution": -1.0
+          },
+          {
+            "signal": "feature",
+            "text": "enhancement request",
+            "contribution": -1.0
+          },
+          {
+            "signal": "actionable",
+            "text": "actionable report",
+            "contribution": 0.99
+          },
+          {
+            "signal": "release_proximity",
+            "text": "reported near a relevant release",
+            "contribution": 0.71
+          },
+          {
+            "signal": "downstream",
+            "text": "downstream integration affected",
+            "contribution": 0.54
+          },
+          {
+            "signal": "security",
+            "text": "security-sensitive report",
+            "contribution": 0.24
+          },
+          {
+            "signal": "repro",
+            "text": "reproduction provided",
+            "contribution": 0.17
+          },
+          {
+            "signal": "spec",
+            "text": "protocol conformance",
+            "contribution": 0.07
+          }
+        ],
+        "maintainer_replied": false,
+        "assigned": false,
+        "linked_prs": []
+      },
+      {
         "number": 529,
         "title": "Handling SSE McpServer Restarts/Crashes: Exiting Async With Block and Reconnecting Client",
         "url": "https://github.com/PrefectHQ/fastmcp/issues/529",
@@ -19128,82 +19214,6 @@
             "signal": "downstream",
             "text": "downstream integration affected",
             "contribution": 0.06
-          }
-        ],
-        "maintainer_replied": false,
-        "assigned": false,
-        "linked_prs": []
-      },
-      {
-        "number": 5648,
-        "title": "Supported way to serve one server's lifespan to several HTTP apps with different auth providers",
-        "url": "https://github.com/PrefectHQ/fastmcp/issues/5648",
-        "updated_at": "2026-10-09T14:47:56+00:00",
-        "score": 2.45,
-        "kind": "feature",
-        "judged": true,
-        "assessment": {
-          "kind": {
-            "bug": 0.0,
-            "regression": 0.0,
-            "feature": 1.0,
-            "question": 0.0,
-            "docs": 0.0,
-            "other": 0.0
-          },
-          "repro": 0.11,
-          "actionable": 0.995,
-          "severity": 0.5766666666666667,
-          "security": 0.06,
-          "spec": 0.07,
-          "downstream": 0.36
-        },
-        "input_digest": "64f87226c947bc0bf8b5ddf590f4a0c18d23c8f70ec11dc6d399decc3aa86776",
-        "reasons": [
-          {
-            "signal": "severity",
-            "text": "potential impact",
-            "contribution": 1.73
-          },
-          {
-            "signal": "feature_label",
-            "text": "enhancement label",
-            "contribution": -1.0
-          },
-          {
-            "signal": "feature",
-            "text": "enhancement request",
-            "contribution": -1.0
-          },
-          {
-            "signal": "actionable",
-            "text": "actionable report",
-            "contribution": 0.99
-          },
-          {
-            "signal": "release_proximity",
-            "text": "reported near a relevant release",
-            "contribution": 0.71
-          },
-          {
-            "signal": "downstream",
-            "text": "downstream integration affected",
-            "contribution": 0.54
-          },
-          {
-            "signal": "security",
-            "text": "security-sensitive report",
-            "contribution": 0.24
-          },
-          {
-            "signal": "repro",
-            "text": "reproduction provided",
-            "contribution": 0.17
-          },
-          {
-            "signal": "spec",
-            "text": "protocol conformance",
-            "contribution": 0.07
           }
         ],
         "maintainer_replied": false,
@@ -23808,6 +23818,87 @@
         "linked_prs": []
       },
       {
+        "number": 5649,
+        "title": "Example use case: keyless web search and page fetching with a FastMCP client",
+        "url": "https://github.com/PrefectHQ/fastmcp/issues/5649",
+        "updated_at": "2026-10-09T17:32:29+00:00",
+        "score": 0.41,
+        "kind": "feature",
+        "judged": true,
+        "assessment": {
+          "kind": {
+            "bug": 0.0,
+            "regression": 0.0,
+            "feature": 0.86,
+            "question": 0.0,
+            "docs": 0.14,
+            "other": 0.0
+          },
+          "repro": 0.04,
+          "actionable": 0.875,
+          "severity": 0.12,
+          "security": 0.04,
+          "spec": 0.06,
+          "downstream": 0.03
+        },
+        "input_digest": "6ee774195104622f546fdc374913f8a54bd46c78d0ed006dc2dfa67c563500d7",
+        "reasons": [
+          {
+            "signal": "deprioritized",
+            "text": "low-priority label",
+            "contribution": -1.5
+          },
+          {
+            "signal": "neglect",
+            "text": "awaiting maintainer reply",
+            "contribution": 1.5
+          },
+          {
+            "signal": "feature_label",
+            "text": "enhancement label",
+            "contribution": -1.0
+          },
+          {
+            "signal": "actionable",
+            "text": "actionable report",
+            "contribution": 0.88
+          },
+          {
+            "signal": "feature",
+            "text": "enhancement request",
+            "contribution": -0.86
+          },
+          {
+            "signal": "release_proximity",
+            "text": "reported near a relevant release",
+            "contribution": 0.71
+          },
+          {
+            "signal": "severity",
+            "text": "potential impact",
+            "contribution": 0.36
+          },
+          {
+            "signal": "security",
+            "text": "security-sensitive report",
+            "contribution": 0.16
+          },
+          {
+            "signal": "repro",
+            "text": "reproduction provided",
+            "contribution": 0.06
+          },
+          {
+            "signal": "spec",
+            "text": "protocol conformance",
+            "contribution": 0.06
+          }
+        ],
+        "maintainer_replied": false,
+        "assigned": false,
+        "linked_prs": []
+      },
+      {
         "number": 543,
         "title": "How to set environment variables when creating a client using SSE",
         "url": "https://github.com/PrefectHQ/fastmcp/issues/543",
@@ -25528,82 +25619,6 @@
           {
             "signal": "downstream",
             "text": "downstream integration affected",
-            "contribution": 0.06
-          }
-        ],
-        "maintainer_replied": false,
-        "assigned": false,
-        "linked_prs": []
-      },
-      {
-        "number": 5649,
-        "title": "Example use case: keyless web search and page fetching with a FastMCP client",
-        "url": "https://github.com/PrefectHQ/fastmcp/issues/5649",
-        "updated_at": "2026-10-09T17:32:29+00:00",
-        "score": -1.09,
-        "kind": "feature",
-        "judged": true,
-        "assessment": {
-          "kind": {
-            "bug": 0.0,
-            "regression": 0.0,
-            "feature": 0.86,
-            "question": 0.0,
-            "docs": 0.14,
-            "other": 0.0
-          },
-          "repro": 0.04,
-          "actionable": 0.875,
-          "severity": 0.12,
-          "security": 0.04,
-          "spec": 0.06,
-          "downstream": 0.03
-        },
-        "input_digest": "6ee774195104622f546fdc374913f8a54bd46c78d0ed006dc2dfa67c563500d7",
-        "reasons": [
-          {
-            "signal": "deprioritized",
-            "text": "low-priority label",
-            "contribution": -1.5
-          },
-          {
-            "signal": "feature_label",
-            "text": "enhancement label",
-            "contribution": -1.0
-          },
-          {
-            "signal": "actionable",
-            "text": "actionable report",
-            "contribution": 0.88
-          },
-          {
-            "signal": "feature",
-            "text": "enhancement request",
-            "contribution": -0.86
-          },
-          {
-            "signal": "release_proximity",
-            "text": "reported near a relevant release",
-            "contribution": 0.71
-          },
-          {
-            "signal": "severity",
-            "text": "potential impact",
-            "contribution": 0.36
-          },
-          {
-            "signal": "security",
-            "text": "security-sensitive report",
-            "contribution": 0.16
-          },
-          {
-            "signal": "repro",
-            "text": "reproduction provided",
-            "contribution": 0.06
-          },
-          {
-            "signal": "spec",
-            "text": "protocol conformance",
             "contribution": 0.06
           }
         ],

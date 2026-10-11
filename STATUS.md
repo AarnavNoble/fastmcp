@@ -1,10 +1,10 @@
 # FastMCP maintenance status
 
-As of 2026-10-11T13:11:52Z. Generated twice a day by [maintenance-status](https://github.com/PrefectHQ/fastmcp/actions/workflows/maintenance-status.yml); machine-readable as [status.json](status.json). How the project is run: [Development guide](https://github.com/PrefectHQ/fastmcp/blob/main/docs/development/contributing.mdx#maintenance-and-automation).
+As of 2026-10-11T21:11:14Z. Generated twice a day by [maintenance-status](https://github.com/PrefectHQ/fastmcp/actions/workflows/maintenance-status.yml); machine-readable as [status.json](status.json). How the project is run: [Development guide](https://github.com/PrefectHQ/fastmcp/blob/main/docs/development/contributing.mdx#maintenance-and-automation).
 
 | automation | state | last ok | runs on | cadence |
 |---|---|---|---|---|
-| [issue-link gate](https://github.com/PrefectHQ/fastmcp/actions/workflows/require-issue-link.yml) | ok | 2026-10-10 | github-actions | on each external PR change and each issue assignment |
+| [issue-link gate](https://github.com/PrefectHQ/fastmcp/actions/workflows/require-issue-link.yml) | ok | — | github-actions | on each external PR change and each issue assignment |
 | [labeling](https://github.com/PrefectHQ/fastmcp/actions/workflows/marvin-label-triage.yml) | ok | 2026-10-11 | github-actions | on each new issue or PR |
 | [duplicate detection](https://github.com/PrefectHQ/fastmcp/actions/workflows/marvin-dedupe-issues.yml) | ok | 2026-10-11 | github-actions | on each new issue |
 | [auto-close](https://github.com/PrefectHQ/fastmcp/actions/workflows/auto-close-duplicates.yml) | ok | 2026-10-11 | github-actions | daily |
