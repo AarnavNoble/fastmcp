@@ -12,12 +12,11 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from atproto import Client, models
+from atproto import Client, IdResolver, models
 from atproto.exceptions import AtProtocolError
 
 ROOT = Path(__file__).resolve().parents[2]
 DID = "did:plc:fkndnffqehgkbuahbysm3d4w"
-PDS = "https://phellinus.us-west.host.bsky.network"
 COLLECTION = "supply.skillz.skill"
 REPO = "https://github.com/PrefectHQ/fastmcp"
 
@@ -169,7 +168,11 @@ def main() -> None:
             print("Publication source superseded on main; skipping publish")
             return
     records = [skill_record(name) for name in tracked_skills()]
-    publish(Client(PDS), records, args.dry_run)
+    document = IdResolver().did.resolve(DID)
+    pds = document.get_pds_endpoint() if document else None
+    if not pds:
+        raise ValueError("Publishing account has no PDS endpoint")
+    publish(Client(pds), records, args.dry_run)
 
 
 if __name__ == "__main__":
