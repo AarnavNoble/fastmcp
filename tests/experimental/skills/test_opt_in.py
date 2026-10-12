@@ -44,7 +44,7 @@ def test_experimental_mode_requires_standard_main_file(tmp_path: Path):
 async def test_experimental_discovery_is_additive_to_resources(tmp_path: Path):
     directory = tmp_path / "review"
     directory.mkdir()
-    (directory / "SKILL.md").write_text("# Permissive existing skill\n")
+    (directory / "SKILL.md").write_bytes(b"# Permissive existing skill\n")
     (directory / "notes.txt").write_text("supporting content")
     provider = SkillsDirectoryProvider(tmp_path, experimental_skills=True)
     server = FastMCP("Skills", providers=[provider])
