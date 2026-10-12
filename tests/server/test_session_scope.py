@@ -9,6 +9,7 @@ carries no client identity and is rejected rather than losing data.
 import base64
 
 import pytest
+from mcp.shared.exceptions import MCPError
 
 from fastmcp import Client, Context, FastMCP
 from fastmcp.apps.file_upload import FileUpload
@@ -141,3 +142,19 @@ class TestAuthenticatedHttp:
 
         assert not visible_to_a
         assert visible_to_b
+
+
+async def test_state_store_failure_is_not_read_as_no_rules(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    server = build_server()
+
+    async def broken_get(**kwargs):
+        raise RuntimeError("store down")
+
+    async with Client(server) as client:
+        await client.call_tool("hide_secret", {})
+        monkeypatch.setattr(server._state_store, "get", broken_get)
+
+        with pytest.raises(MCPError, match="Internal server error"):
+            await client.list_tools()

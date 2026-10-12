@@ -325,8 +325,15 @@ def _visibility_rules_key(context: Context) -> str | None:
 
 
 async def get_visibility_rules(context: Context) -> list[dict[str, Any]]:
-    """Load visibility rule dicts from session state."""
-    key = _visibility_rules_key(context)
+    """Load visibility rule dicts from session state.
+
+    Returns no rules when there is no session or no client identity to scope
+    them to.
+    """
+    try:
+        key = _visibility_rules_key(context)
+    except RuntimeError:
+        return []
     if key is None:
         return []
     result = await context.fastmcp._state_store.get(key=key)
@@ -404,11 +411,7 @@ def create_visibility_transforms(rules: list[dict[str, Any]]) -> list[Visibility
 
 async def get_session_transforms(context: Context) -> list[Visibility]:
     """Get session-specific Visibility transforms from state store."""
-    try:
-        # Will raise RuntimeError if no session available
-        rules = await get_visibility_rules(context)
-    except RuntimeError:
-        return []
+    rules = await get_visibility_rules(context)
     return create_visibility_transforms(rules)
 
 
