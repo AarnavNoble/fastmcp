@@ -1,0 +1,70 @@
+{
+  "skill_name": "fastmcp-server",
+  "evaluation_notes": "Run in isolated temporary projects with the target FastMCP version recorded. Execute generated tests and inspect protocol results; assertions below are behavioral review criteria, not substring checks. Do not access real user notes or delete production data. Compare the same tasks with and without the skill if measuring efficacy; execution of skill examples alone does not establish efficacy.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Using FastMCP, build a Python MCP server for a configurable notes directory: search note titles with bounded results, read a note by name, and expose a JSON folder-listing resource. Include tests using temporary files.",
+      "expected_output": "An importable server with typed tools, an explicit JSON resource MIME type, and passing in-process protocol tests.",
+      "assertions": [
+        "The implementation uses the declared FastMCP version and inspects client-visible schemas",
+        "A valid note is returned correctly, and search results obey the requested bound",
+        "Traversal, absolute outside-root paths, and symlinks escaping the root cannot disclose outside files",
+        "Missing notes and invalid input produce protocol errors rather than successful error-shaped data",
+        "The listing resource is readable with application/json MIME type and valid JSON content",
+        "Tests execute through Client(mcp), and the stdio entrypoint completes a real client call without stdout contamination"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Migrate this old server to FastMCP 4 in an isolated project: main = FastMCP('svc', host='127.0.0.1', port=8080); sub = FastMCP('sub'); main.import_server(sub). Add a tool to sub and serve the combined server over HTTP. Include a test proving the child tool is callable.",
+      "expected_output": "A version-verified migration with live composition and a working HTTP runner.",
+      "assertions": [
+        "The implementation checks the installed version and relevant migration/composition docs",
+        "host and port are passed to the HTTP runner or ASGI server, never FastMCP() or http_app()",
+        "The documented live mount API replaces import_server with verified naming semantics",
+        "A real Client call reaches the child tool through the parent",
+        "An HTTP smoke test reaches the chosen endpoint and shuts down cleanly"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "In a FastMCP 4 server, add a tool that asks for human confirmation before deleting an in-memory test record and remembers the caller's last deleted id across calls. Support authenticated callers and fail closed for anonymous callers or clients that cannot confirm. Use temporary test data only.",
+      "expected_output": "Version-appropriate interactive flow with identity-scoped state and executable negative-path tests.",
+      "assertions": [
+        "The implementation verifies the installed elicitation API and supported protocol/client capabilities",
+        "Decline, cancellation, anonymous callers, and unsupported confirmation perform no deletion",
+        "Approval is bound to the verified caller and exact record; a caller-supplied boolean is insufficient",
+        "Cross-call state survives a second call for the same caller and does not leak to a different caller",
+        "Repeated completion cannot delete twice or corrupt the remembered result",
+        "The generated tests actually execute the confirmation and state behavior; mocks of the tool itself do not count"
+      ]
+    }
+  ],
+  "trigger_checks": {
+    "should_trigger": [
+      "Build a Python MCP server using FastMCP for my notes.",
+      "Add a resource template to our FastMCP server.",
+      "Debug a FastMCP tool whose output schema is wrong.",
+      "Test our FastMCP server's startup and cleanup.",
+      "Migrate this FastMCP 3 server to FastMCP 4.",
+      "Fix async I/O blocking our FastMCP server.",
+      "Add authenticated user state to this FastMCP server.",
+      "Our FastMCP server prints debug output and stdio clients fail.",
+      "Expose a prompt from the existing FastMCP service.",
+      "Mount our two FastMCP servers and test tool discovery."
+    ],
+    "should_not_trigger": [
+      "Build an MCP server in TypeScript using the MCP SDK.",
+      "Keep the Python MCP SDK we use; do not migrate to FastMCP.",
+      "Use the connected MCP server to list my notes.",
+      "Write a FastMCP client for an existing remote server.",
+      "Find FastMCP issues worth contributing to.",
+      "Summarize FastMCP's release announcement.",
+      "Build a REST API using FastAPI.",
+      "Configure my editor to connect to an existing MCP server.",
+      "Review the MCP protocol specification proposal.",
+      "Deploy this already-tested service to a hosting provider without changing its code."
+    ]
+  }
+}
