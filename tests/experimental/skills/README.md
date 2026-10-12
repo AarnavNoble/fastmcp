@@ -20,14 +20,16 @@ node dist/index.js server --url http://127.0.0.1:18764/mcp \
   --scenario sep-2640-skills-directory --spec-version 2026-07-28 --force
 ```
 
-Enumeration passed 32 checks. Manifest validation passed five checks with one
-SHOULD-level warning: resources retain FastMCP's standard `_meta.fastmcp`
-metadata instead of moving it under the Skills-specific prefix. The directory
+Enumeration passed 32 checks. Manifest validation passed four checks with two
+SHOULD-level warnings: resources retain their existing names (such as
+`review/SKILL.md`) and FastMCP's standard `_meta.fastmcp` metadata instead of
+switching to frontmatter names and the Skills-specific metadata prefix. The directory
 scenario passed wire validation and skipped optional directory checks because
 `directoryRead` is not advertised.
 
 Local protocol tests cover both supporting-file publication modes, nested
-skills, binary data, component and global middleware authorization, URI aliases, resource shadowing, duplicate
+skills, binary data, component and global middleware authorization, shared access
+policies, additive legacy resources, URI aliases, resource shadowing, duplicate
 identities, malformed frontmatter, cache refresh, and nonregular files. Snapshot
 tests also verify duplicate YAML keys, recursive aliases, JSON-incompatible
 values, raw byte digests, symlinks, and unreadable path rejection.

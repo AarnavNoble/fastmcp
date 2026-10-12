@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import mimetypes
 from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
@@ -13,19 +12,21 @@ import yaml
 from anyio.to_thread import run_sync
 from mcp.server.context import ServerRequestContext
 from mcp.shared.path_security import PathEscapeError, safe_join
-from pydantic import AnyUrl
 
 from fastmcp.exceptions import AuthorizationError
 from fastmcp.resources.base import Resource
 from fastmcp.resources.template import ResourceTemplate
-from fastmcp.server.dependencies import get_access_token, get_context
-from fastmcp.server.middleware.authorization import AuthMiddleware
+from fastmcp.server.dependencies import get_context
 from fastmcp.server.providers.aggregate import AggregateProvider
-from fastmcp.server.providers.skills.skill_provider import SkillProvider
-from fastmcp.skills._resources import SnapshotResource, SnapshotResourceTemplate
+from fastmcp.server.providers.skills._common import SkillInfo
+from fastmcp.server.providers.skills.skill_provider import (
+    SkillFileResource,
+    SkillFileTemplate,
+    SkillProvider,
+    SkillResource,
+)
 from fastmcp.skills._snapshot import Snapshot, snapshot
 from fastmcp.skills.models import Skill
-from fastmcp.utilities.authorization import AuthContext, run_auth_checks
 from fastmcp.utilities.logging import get_logger
 from fastmcp.utilities.versions import VersionSpec
 
@@ -210,7 +211,7 @@ class SkillsDirectoryProvider(AggregateProvider):
                 continue
             for main in sorted(root.rglob("SKILL.md")):
                 directory = main.parent
-                if directory == root:
+                if not main.is_file() or directory == root:
                     continue
                 if any(
                     p.is_symlink()
@@ -238,29 +239,36 @@ class SkillsDirectoryProvider(AggregateProvider):
                 logger.warning("Omitting invalid skill %s: %s", path, exc)
         return snapshots
 
-    def _resource(
-        self, uri: str, path: Path, root: Path, entry: Skill
-    ) -> SnapshotResource:
-        is_main = uri == entry.uri
-        return SnapshotResource(
-            uri=AnyUrl(uri),
-            name=entry.frontmatter.name if is_main else path.name,
-            description=entry.frontmatter.description if is_main else None,
-            mime_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-            root=root,
-            relative_path=path.relative_to(root).as_posix(),
+    def _resource_provider(
+        self, root: Path, name: str, relative: str | None = None
+    ) -> SkillProvider:
+        if relative is None or relative == "_manifest":
+            provider = SkillProvider(root, supporting_files=self._supporting_files)
+            info = provider.skill_info
+            info.name = name
+            info.path = root
+            info.preserve_bytes = True
+            return provider
+        info = SkillInfo(
+            name=name,
+            description=f"Skill: {name}",
+            path=root,
+            main_file="SKILL.md",
+            preserve_bytes=True,
+        )
+        return SkillProvider(
+            root, supporting_files=self._supporting_files, _skill_info=info
         )
 
     async def _protocol_list_resources(self) -> Sequence[Resource]:
-        snapshots = await run_sync(self._snapshots)
         resources: dict[str, Resource] = {}
-        for snap in snapshots:
-            root = next(
-                path.parent for uri, path in snap.files if uri == snap.entry.uri
-            )
-            for uri, path in snap.files:
-                if uri == snap.entry.uri or self._supporting_files == "resources":
-                    resources[uri] = self._resource(uri, path, root, snap.entry)
+        for name, root in await run_sync(self._directories):
+            try:
+                provider = await run_sync(self._resource_provider, root, name)
+            except (OSError, ValueError):
+                continue
+            for resource in await provider.list_resources():
+                resources[str(resource.uri)] = resource
         return list(resources.values())
 
     def _directories_for_name(self, name: str) -> list[Path]:
@@ -315,35 +323,31 @@ class SkillsDirectoryProvider(AggregateProvider):
         if resolved is None:
             return None
         root, relative = resolved
-        if relative != "SKILL.md" and self._supporting_files != "resources":
+        if (
+            relative not in {"SKILL.md", "_manifest"}
+            and self._supporting_files != "resources"
+        ):
             return None
         path = root / relative
-        if not path.is_file():
+        if relative != "_manifest" and not path.is_file():
             return None
-        return SnapshotResource(
-            uri=AnyUrl(uri),
-            name=root.name if relative == "SKILL.md" else path.name,
-            mime_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-            root=root,
-            relative_path=relative,
-        )
+        parts = self._uri_parts(uri)
+        assert parts is not None
+        name = "/".join(parts[: -len(relative.split("/"))])
+        if relative == "_manifest":
+            provider = await run_sync(self._resource_provider, root, name, relative)
+        else:
+            provider = self._resource_provider(root, name, relative)
+        return await provider.get_resource(uri, version)
 
     async def _protocol_list_resource_templates(self) -> Sequence[ResourceTemplate]:
         if self._supporting_files != "template":
             return []
-        return [
-            SnapshotResourceTemplate(
-                uri_template=f"skill://{quote(name, safe='/')}/{{path*}}",
-                name=f"{root.name}_files",
-                root=root,
-                parameters={
-                    "type": "object",
-                    "properties": {"path": {"type": "string"}},
-                    "required": ["path"],
-                },
-            )
-            for name, root in self._directories()
-        ]
+        templates: list[ResourceTemplate] = []
+        for name, root in await run_sync(self._directories):
+            provider = self._resource_provider(root, name, "SKILL.md")
+            templates.extend(await provider.list_resource_templates())
+        return templates
 
     async def _protocol_get_resource_template(
         self, uri: str, version: VersionSpec | None = None
@@ -354,54 +358,40 @@ class SkillsDirectoryProvider(AggregateProvider):
         if resolved is None:
             return None
         root, relative = resolved
-        if relative == "SKILL.md":
+        if relative in {"SKILL.md", "_manifest"}:
             return None
-        prefix = uri[: -len(quote(relative, safe="/"))]
-        return SnapshotResourceTemplate(
-            uri_template=f"{prefix}{{path*}}",
-            name=f"{root.name}_files",
-            root=root,
-            parameters={
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
-                "required": ["path"],
-            },
-        )
+        parts = self._uri_parts(uri)
+        assert parts is not None
+        name = "/".join(parts[: -len(relative.split("/"))])
+        provider = self._resource_provider(root, name, relative)
+        return await provider.get_resource_template(uri, version)
 
     async def _visible_entry(self, snap: Snapshot) -> Skill | None:
-        from fastmcp.server.context import _current_transport
-
         server = get_context().fastmcp
-        authorization = [
-            mw for mw in server.middleware if isinstance(mw, AuthMiddleware)
-        ]
         for uri, path in snap.files:
             component: Resource | ResourceTemplate | None = await server.get_resource(
                 uri
             )
             if component is not None:
-                if (
-                    not isinstance(component, SnapshotResource)
-                    or component.root / component.relative_path != path
-                ):
+                if isinstance(component, SkillResource) and not component.is_manifest:
+                    backing = component.skill_info.path / component.skill_info.main_file
+                elif isinstance(component, SkillFileResource):
+                    backing = component.skill_info.path / component.file_path
+                else:
+                    return None
+                if backing != path or not component.skill_info.preserve_bytes:
                     return None
             else:
                 component = await server.get_resource_template(uri)
-                if not isinstance(component, SnapshotResourceTemplate):
+                if not isinstance(component, SkillFileTemplate):
                     return None
                 params = component.matches(uri)
-                if params is None or component.root / params["path"] != path:
+                if params is None or component.skill_info.path / params["path"] != path:
                     return None
-            if _current_transport.get() != "stdio":
-                auth_context = AuthContext(
-                    token=get_access_token(), component=component
-                )
-                for middleware in authorization:
-                    try:
-                        if not await run_auth_checks(middleware.auth, auth_context):
-                            return None
-                    except AuthorizationError:
-                        return None
+            try:
+                await server._check_resource_access(uri)
+            except AuthorizationError:
+                return None
         return snap.entry
 
     async def _list_skill_entries(

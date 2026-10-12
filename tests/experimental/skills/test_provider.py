@@ -10,6 +10,8 @@ from mcp.shared.exceptions import MCPError
 from mcp_types import BlobResourceContents, TextResourceContents
 
 from fastmcp import Client, FastMCP
+from fastmcp.exceptions import AuthorizationError
+from fastmcp.server.middleware import Middleware
 from fastmcp.server.middleware.caching import ResponseCachingMiddleware
 from fastmcp.server.providers.skills import SkillsDirectoryProvider
 from fastmcp.skills import SkillsClientExtension
@@ -247,7 +249,7 @@ async def test_global_resource_authorization_hides_skill(
         "---\nname: review\ndescription: Private instructions\n---\n"
     )
     (root / "notes.md").write_text("private supporting file")
-    denied = {"review"} if deny_main else {"notes.md", "review_files"}
+    denied = {"review/SKILL.md"} if deny_main else {"review/notes.md", "review_files"}
     provider = SkillsDirectoryProvider(
         tmp_path, supporting_files=mode, experimental_skills=True
     )
@@ -268,6 +270,44 @@ async def test_global_resource_authorization_hides_skill(
         with pytest.raises(MCPError, match="Unknown skill URI"):
             await client.get_skill("skill://review/SKILL.md")
         denied.clear()
+        assert len(await client.list_skills()) == 1
+        assert (
+            await client.get_skill("skill://review/SKILL.md")
+        ).frontmatter.name == "review"
+
+
+@pytest.mark.parametrize("mode", ["template", "resources"])
+async def test_shared_access_policy_controls_reads_and_skill_metadata(
+    tmp_path: Path, mode
+):
+    blocked = {"skill://review/notes.md"}
+
+    class ResourcePolicy(Middleware):
+        async def check_resource_access(self, context):
+            if str(context.message.uri) in blocked:
+                raise AuthorizationError("Private supporting file")
+
+    root = tmp_path / "review"
+    root.mkdir()
+    (root / "SKILL.md").write_text("---\nname: review\ndescription: Review code\n---\n")
+    (root / "notes.md").write_text("private")
+    provider = SkillsDirectoryProvider(
+        tmp_path, experimental_skills=True, supporting_files=mode
+    )
+    server = FastMCP("Skills", providers=[provider], middleware=[ResourcePolicy()])
+    server.add_extension(SkillsExtension(providers=[provider]))
+    async with Client(
+        server, mode="auto", extensions=[SkillsClientExtension()]
+    ) as client:
+        with pytest.raises(MCPError, match="Private supporting file"):
+            await client.read_resource("skill://review/notes.md")
+        assert await client.list_skills() == []
+        with pytest.raises(MCPError, match="Unknown skill URI"):
+            await client.get_skill("skill://review/SKILL.md")
+        blocked.clear()
+        assert (await client.read_resource("skill://review/notes.md"))[
+            0
+        ].text == "private"
         assert len(await client.list_skills()) == 1
         assert (
             await client.get_skill("skill://review/SKILL.md")

@@ -4,6 +4,7 @@ import pytest
 
 from fastmcp import Client, FastMCP
 from fastmcp.server.providers.skills import SkillsDirectoryProvider
+from fastmcp.skills import SkillsClientExtension
 from fastmcp.skills.extension import SkillsExtension
 
 
@@ -38,3 +39,35 @@ def test_experimental_mode_requires_standard_main_file(tmp_path: Path):
         SkillsDirectoryProvider(
             tmp_path, main_file_name="README.md", experimental_skills=True
         )
+
+
+async def test_experimental_discovery_is_additive_to_resources(tmp_path: Path):
+    directory = tmp_path / "review"
+    directory.mkdir()
+    (directory / "SKILL.md").write_text("# Permissive existing skill\n")
+    (directory / "notes.txt").write_text("supporting content")
+    provider = SkillsDirectoryProvider(tmp_path, experimental_skills=True)
+    server = FastMCP("Skills", providers=[provider])
+    server.add_extension(SkillsExtension(providers=[provider]))
+    async with Client(
+        server, mode="auto", extensions=[SkillsClientExtension()]
+    ) as client:
+        assert {str(resource.uri) for resource in await client.list_resources()} == {
+            "skill://review/SKILL.md",
+            "skill://review/_manifest",
+        }
+        assert (await client.read_resource("skill://review/SKILL.md"))[
+            0
+        ].text == "# Permissive existing skill\n"
+        assert (await client.read_resource("skill://review/notes.txt"))[
+            0
+        ].text == "supporting content"
+        assert (
+            "notes.txt"
+            in (await client.read_resource("skill://review/_manifest"))[0].text
+        )
+        assert await client.list_skills() == []
+        (directory / "SKILL.md").write_text(
+            "---\nname: review\ndescription: Review code\n---\n"
+        )
+        assert len(await client.list_skills()) == 1
