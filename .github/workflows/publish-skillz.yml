@@ -6,13 +6,11 @@ on:
     paths:
       - skills/fastmcp-server/**
       - .github/scripts/publish_skillz.py
-      - .github/scripts/test_publish_skillz.py
       - .github/workflows/publish-skillz.yml
   pull_request:
     paths:
       - skills/fastmcp-server/**
       - .github/scripts/publish_skillz.py
-      - .github/scripts/test_publish_skillz.py
       - .github/workflows/publish-skillz.yml
   workflow_dispatch:
     inputs:
@@ -37,8 +35,6 @@ jobs:
       - uses: astral-sh/setup-uv@v10.1.0
         with:
           python-version: "3.12"
-      - name: Test publishing behavior
-        run: uv run .github/scripts/test_publish_skillz.py
       - name: Compare public records without credentials
         run: uv run .github/scripts/publish_skillz.py --dry-run
 

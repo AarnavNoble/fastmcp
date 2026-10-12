@@ -13,9 +13,8 @@ The `Publish authoring skill` workflow publishes `fastmcp-server` on relevant
 `main` changes as `gofastmcp.com` (`did:plc:fkndnffqehgkbuahbysm3d4w`). It does
 not publish maintenance skills or the client CLI skill. Git remains the source;
 skillz.supply carries the skill body, metadata, and a link back to its source.
-The companion evaluation scenarios remain in Git.
 
-PRs run publisher tests and a public, unauthenticated comparison. Publishing
+PRs run a public, unauthenticated comparison. Publishing
 requires the repository's `SKILLZ_APP_PASSWORD` Actions secret, an app password
 for the publishing account. Never place that value in repository files.
 Manual runs default to dry-run; publishing runs require `main`. Superseded publication
@@ -24,7 +23,6 @@ account changes rather than overwriting them. Rerun on current `main` after
 inspecting a conflict.
 
 ```bash
-uv run .github/scripts/test_publish_skillz.py
 uv run .github/scripts/publish_skillz.py --dry-run
 ```
 

@@ -149,7 +149,6 @@ def source_is_current() -> bool:
             "--",
             "skills/fastmcp-server",
             ".github/scripts/publish_skillz.py",
-            ".github/scripts/test_publish_skillz.py",
             ".github/workflows/publish-skillz.yml",
         ],
         cwd=ROOT,

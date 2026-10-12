@@ -1,162 +1,70 @@
 ---
 name: fastmcp-server
-description: Build, extend, test, or debug Python MCP servers using FastMCP. Use when FastMCP is requested or already used by the server; covers tool and resource interfaces, lifecycle, state, and transport behavior. Not for MCP client integrations or merely calling an existing server.
+description: Build, extend, or review Python MCP servers using FastMCP 3 or 4. Covers tool design, implementation, and verification with documentation matched to the project's version.
 ---
 
 # FastMCP server authoring
 
-Use the standalone `fastmcp` package, not the similarly named module inside
-`mcp.server`. Preserve an existing project's chosen SDK and version; an MCP
-request alone is not a reason to migrate it to FastMCP.
+## Retrieve the API you need
 
-## Establish the API in use
+Check the project's dependency constraints, lockfile, and installed `fastmcp`
+version before writing code. Preserve its major version and package manager.
+Use the standalone `fastmcp` package rather than `mcp.server.fastmcp`.
 
-Inspect the project's dependency declarations and lockfile before installing
-anything. In its environment, check the installed distribution and CLI:
+Fetch [gofastmcp.com/llms.txt](https://gofastmcp.com/llms.txt), find the relevant
+topic in the installed major's documentation, and read that page's Markdown.
+The index includes versioned pages such as `/v3/`; don't assume the unversioned
+page matches the project. Fetch only what the task needs, such as tools,
+composition, lifespan, testing, or deployment.
 
-```bash
-uv run python -c "from importlib.metadata import version; print(version('fastmcp'))"
-uv run fastmcp --help
-```
+Confirm newer features against the installed package's signatures/source or
+its exact release tag: even same-major docs may be ahead of an older minor.
+For a Git-pinned dependency, inspect that revision. If docs are unavailable,
+use installed source and tests and state any uncertainty. Don't upgrade the
+project to fit an example. Especially recheck state lifetime, elicitation,
+transforms, and import paths when moving between FastMCP 3 and 4.
 
-For a new project using uv, `uv add fastmcp` records
-the dependency. Follow an existing project's package manager.
+## Design for the agent's task
 
-Retrieve the relevant official documentation before relying on a signature,
-import, decorator argument, or CLI option. Start at
-[the docs index](https://gofastmcp.com/llms.txt). The root documents the current
-major; older majors have versioned sections such as `/v3/`. Check the page's
-version and the installed package: a versioned major's docs can still describe
-features newer than the installed minor. Use installed source/signatures or
-the matching Git tag when docs and runtime disagree. Do not upgrade a project
-just to make a copied example work.
+Start with a concrete request the server should help complete. Design the
+operations and responses around that workflow, not automatically around every
+REST endpoint. For example, diagnosing a failed run should expose the run,
+relevant logs, and failure context without making the agent join raw API dumps.
 
-Read only the pages relevant to the change:
+- Return compact summaries for discovery, with stable IDs and a way to fetch
+  detail. Keep search snippets separate from full documents. Bound output and
+  report partial results with a cursor or useful narrowing advice.
+- Filter and aggregate near the data. Remove irrelevant fields, but preserve
+  meaningful nulls, empty values, and declared output contracts.
+- Describe when to use each tool, its side effects, and how to continue from
+  its result. Put shared workflow guidance in server instructions; use resources
+  and prompts for reference material clients can retrieve when needed.
+- Use typed parameters and results, meaningful field descriptions, and input
+  constraints. Return native structured data instead of JSON strings. Inspect
+  the schemas clients actually receive. Tool annotations are hints, not auth.
+- For a broad API or composable SDK, consider tool search or code mode instead
+  of loading every schema upfront. Check availability in the project's version;
+  don't force a transform onto a small, already useful toolset.
 
-| Task | Documentation paths on gofastmcp.com |
-| --- | --- |
-| Component definitions, schemas, errors | `/servers/tools.md`, `/servers/resources.md`, `/servers/prompts.md` |
-| Startup and shared dependencies | `/servers/lifespan.md`, `/servers/dependency-injection.md` |
-| Context, state, user interaction | `/servers/context.md`, `/servers/sessions.md`, `/servers/elicitation.md` |
-| Combining servers | `/servers/composition.md` |
-| Authentication and permissions | `/servers/auth/authentication.md`, `/servers/authorization.md` |
-| Tests and transport | `/servers/testing.md`, `/deployment/running-server.md`, `/deployment/http.md` |
-| CLI and project configuration | `/cli/running.md`, `/cli/inspecting.md`, `/deployment/server-configuration.md` |
+[Is Your MCP Server Good?](https://github.com/PrefectHQ/is-your-mcp-server-good)
+compares these designs. Measure catalog size, response size, and the agent's
+actual tool-call sequence; fewer tools alone doesn't prove a better server.
 
-Resolve version-specific equivalents through the index. For migration work,
-read the matching upgrade guide under `/getting-started/upgrading/` and verify
-composition, state, and protocol behavior as well as renamed imports.
+## Implement and verify
 
-## Design the model-facing interface
+Use async I/O without blocking the event loop. Own shared clients and pools
+through a lifespan with cleanup; keep credentials and caller state scoped to
+their actual owner. Return actionable failures through FastMCP's error handling.
+For stateful or interactive tools, retrieve the version's behavior and test
+caller isolation, cancellation, and retries rather than assuming persistence.
 
-- Use tools for operations, resources for addressable content, and prompts for
-  reusable message templates. Match what the target client actually supports.
-- Prefer a typed operation such as `search_notes(query, limit)` over a generic
-  `execute(action, payload)` dispatcher. Descriptions should explain when to
-  call it, significant side effects, and what the result means.
-- Annotate parameters and returns. Use `Annotated` with Pydantic `Field` for
-  bounds and parameter descriptions; use `Literal` or enums for closed choices.
-  Inspect the emitted schema rather than assuming docstring parsing works in
-  every version. Inject `Context` or dependencies through the documented API;
-  callers should not supply them as tool arguments.
-- Return native typed data instead of JSON-encoding tool results into strings.
-  Use specific item types (`list[Note]`, not a bare `list`) when structured
-  output matters. Test the advertised output schema and actual result.
-- Bound search/list results and expose continuation or narrowing information.
-  Never silently truncate serialized JSON. Resources returning JSON should
-  declare `mime_type="application/json"`; resource contents are distinct from
-  tool structured output.
-- Set accurate MCP annotations such as `readOnlyHint`; these are client hints,
-  not authorization or a guarantee that execution is safe. Enforce permissions
-  against the authenticated caller at the operation boundary.
-- Raise `fastmcp.exceptions.ToolError` for deliberate, safe, actionable tool
-  failures. Do not return `{"error": ...}` as a successful tool result or expose
-  raw upstream exceptions containing credentials. Verify error masking and
-  client-visible messages in the target version.
+Keep the server importable. Preserve the requested hosting provider and
+transport: local stdio, self-hosted HTTP/ASGI, and managed hosting are all valid.
+Read the chosen runtime's current configuration requirements; do not couple
+tool logic to a provider. Keep stdout clean for stdio and verify lifespan/auth
+wiring for HTTP.
 
-## Lifecycle and concurrency
-
-Keep the server importable: a module-level `mcp = FastMCP(...)` is a simple
-CLI entrypoint; retain existing factories or composition when appropriate.
-Put executable startup behind a main guard for direct script use. The CLI
-imports the module and does not run that guard.
-
-Acquire shared HTTP clients, pools, and other owned resources in a lifespan,
-with cleanup on exit. When embedding `http_app()` in an ASGI app, wire its
-lifespan as documented. Avoid network calls at import time or creating an
-unclosed client on every tool call.
-
-Use `async def` with async I/O libraries. Declaring a function async does not
-make blocking I/O nonblocking. Recent FastMCP versions dispatch synchronous
-handlers to a threadpool; verify the target version and account for thread
-safety. Keep domain logic callable independently of MCP wrappers.
-
-Inject `Context` for request logging, progress, and protocol capabilities.
-Check which methods are async and await them. Do not retain a request Context
-in globals or use it after its call ends. Keep stdio stdout exclusively for
-protocol traffic; send diagnostics to stderr or the logging facilities.
-
-## State and interactive operations
-
-Distinguish request data, server-wide dependencies, and durable user data.
-Do not assume `ctx.set_state` survives subsequent requests: semantics depend
-on FastMCP version and protocol era. For cross-call state, read the session
-state docs. Key multi-user state by verified caller identity; for trusted
-single-client use, choose explicit session or application storage and document
-its scope. Never use a module global as a per-user store. Verify isolation and
-restart persistence when the request requires them.
-
-Elicitation and resumable input differ by protocol era. Read the version's
-elicitation docs and confirm the client's capabilities before implementing
-confirmation. Handle decline, cancellation, and unsupported clients without
-performing the mutation. A caller-supplied `confirmed=True` is not evidence of
-human approval. For resumable operations, bind approval to the caller and exact
-operation, recheck permissions, and prevent duplicate effects on retries.
-
-For filesystem-backed components, resolve paths against an explicit allowed
-root and reject escapes, including symlinks and absolute paths. A URI template
-or a client-provided root is not an access-control boundary. Test outside-root
-reads through both tools and resources that expose files.
-
-## Run and verify
-
-For local use, stdio is a simple default; network access uses Streamable HTTP.
-Keep host/port settings on the transport runner, not the `FastMCP` constructor.
-Use `run_async()` when the caller already owns an event loop. Binding HTTP does
-not add authentication: configure the documented auth integration for protected
-remote access. Hosting-provider provisioning is separate from server authoring.
-
-Start with in-process protocol tests. This minimal example can live in a single
-`test_server.py`; run it with the project's pytest and async test plugin:
-
-```python
-import pytest
-from fastmcp import Client, FastMCP
-
-mcp = FastMCP("Arithmetic")
-
-
-@mcp.tool
-def add(a: int, b: int) -> int:
-    """Add two integers."""
-    return a + b
-
-
-@pytest.mark.asyncio
-async def test_add():
-    async with Client(mcp) as client:
-        tools = await client.list_tools()
-        assert [tool.name for tool in tools] == ["add"]
-        result = await client.call_tool("add", {"a": 1, "b": 2})
-        assert result.data == 3
-```
-
-Test through `Client(mcp)`, not just direct handler calls. Include meaningful
-invalid input and domain failure cases; verify errors are errors on the wire.
-Exercise resource reads and prompts if exposed. Test lifecycle cleanup, caller
-isolation, and confirmation decline/retry behavior where relevant.
-
-Inspect the client-visible catalog with the installed CLI's `inspect` command
-or `Client.list_tools()`. An in-process pass does not verify transport wiring:
-smoke-test the requested stdio/HTTP entrypoint, including authentication and
-lifespan startup if applicable. Report the version and actual checks run.
+Exercise tools through `Client(server)`, including a meaningful failure case,
+and inspect the advertised inputs and outputs. Then smoke-test the actual
+entrypoint/transport. Run a representative agent task and inspect whether the
+returned evidence supports a useful answer without excessive calls or context.
