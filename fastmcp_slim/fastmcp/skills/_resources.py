@@ -34,7 +34,7 @@ def read_file(root: Path, relative_path: str) -> ResourceResult:
     return ResourceResult([ResourceContent(value, mime_type=mime_type)])
 
 
-class SkillFileResource(Resource):
+class SnapshotResource(Resource):
     root: Path
     relative_path: str
 
@@ -42,7 +42,7 @@ class SkillFileResource(Resource):
         return await run_sync(read_file, self.root, self.relative_path)
 
 
-class SkillFileTemplate(ResourceTemplate):
+class SnapshotResourceTemplate(ResourceTemplate):
     root: Path
 
     async def read(self, arguments: dict[str, Any]) -> ResourceResult:

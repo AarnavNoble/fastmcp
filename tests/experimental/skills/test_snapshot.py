@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from fastmcp.experimental.skills._snapshot import parse_frontmatter, snapshot
+from fastmcp.skills._snapshot import parse_frontmatter, snapshot
 
 
 def test_snapshot_preserves_raw_bytes_and_frontmatter(tmp_path: Path):

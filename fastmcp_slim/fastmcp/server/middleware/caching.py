@@ -532,17 +532,13 @@ class ResponseCachingMiddleware(Middleware):
         if _is_continuation_leg(context):
             return await call_next(context)
 
-        if context.fastmcp_context is not None:
-            from fastmcp.skills._constants import SKILLS_EXTENSION_ID
-            from fastmcp.skills.extension import SkillsExtension
-
-            extension = context.fastmcp_context.fastmcp._extensions.get(
-                SKILLS_EXTENSION_ID
-            )
-            if isinstance(extension, SkillsExtension) and extension.owns_resource_uri(
+        if (
+            context.fastmcp_context is not None
+            and context.fastmcp_context.fastmcp._requires_live_resource(
                 str(context.message.uri)
-            ):
-                return await call_next(context)
+            )
+        ):
+            return await call_next(context)
 
         cache_key: str = _make_read_resource_cache_key(
             msg=context.message, auth_key=_get_auth_partition_key()

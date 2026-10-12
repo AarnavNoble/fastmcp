@@ -6,9 +6,9 @@ from typing import Literal
 import pytest
 
 from fastmcp import Client, FastMCP
-from fastmcp.experimental.skills.extension import SkillsExtension
-from fastmcp.experimental.skills.provider import SkillsDirectoryProvider
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
 from fastmcp.skills import SkillsClientExtension
+from fastmcp.skills.extension import SkillsExtension
 
 
 @pytest.mark.parametrize("mode", ["template", "resources"])
@@ -39,7 +39,9 @@ async def test_discovery_work_scales_with_requested_files(
         reads.append(path)
         return original_read_bytes(path)
 
-    provider = SkillsDirectoryProvider(tmp_path, supporting_files=mode)
+    provider = SkillsDirectoryProvider(
+        tmp_path, experimental_skills=True, supporting_files=mode
+    )
     server = FastMCP("Skills", providers=[provider])
     server.add_extension(SkillsExtension(providers=[provider]))
     async with Client(

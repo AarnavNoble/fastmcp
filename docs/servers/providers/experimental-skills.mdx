@@ -5,7 +5,7 @@ description: Publish filesystem skills through standard MCP skills discovery
 icon: flask
 ---
 
-The experimental Skills provider lets clients discover filesystem skills through `skills/list` and `skills/get`, with frontmatter and a complete file manifest. Files remain ordinary MCP resources, readable through `resources/read`.
+The existing `SkillsDirectoryProvider` can opt into experimental Skills discovery, letting clients discover filesystem skills through `skills/list` and `skills/get`, with frontmatter and a complete file manifest. Files remain ordinary MCP resources, readable through `resources/read`.
 
 <Warning>
 This API is experimental and may change without a deprecation period. It builds on the [MCP Skills extension](https://github.com/modelcontextprotocol/ext-skills/blob/main/specification/stable/skills.mdx). Directory reads, host-side activation, approval, installation, and execution are not implemented.
@@ -13,15 +13,15 @@ This API is experimental and may change without a deprecation period. It builds 
 
 ## Publish skills
 
-Register the experimental provider directly on your server, then register the extension with the same provider instance. The configured directory contains skill directories; each skill needs a UTF-8 `SKILL.md` with valid Agent Skills frontmatter.
+Set `experimental_skills=True` on `SkillsDirectoryProvider`, register it directly on your server, and register `SkillsExtension` with the same provider instance. The configured directory contains skill directories; each skill needs a UTF-8 `SKILL.md` with valid Agent Skills frontmatter.
 
 ```python
 from fastmcp import FastMCP
-from fastmcp.experimental.skills.extension import SkillsExtension
-from fastmcp.experimental.skills.provider import SkillsDirectoryProvider
+from fastmcp.skills.extension import SkillsExtension
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
 
 mcp = FastMCP("Skills")
-skills = SkillsDirectoryProvider("./skills")
+skills = SkillsDirectoryProvider("./skills", experimental_skills=True)
 mcp.add_provider(skills)
 mcp.add_extension(SkillsExtension(providers=[skills]))
 
@@ -75,6 +75,8 @@ The entire entry is omitted when any supporting resource or template is unavaila
 
 ## Supported composition
 
-Use directly registered experimental providers. Server and provider transforms, namespacing, mounted skill sources, and proxies are not supported. Custom middleware that changes resource content must also update the corresponding manifests; otherwise it is incompatible with this experiment.
+Use directly registered providers with `experimental_skills=True`. Server and provider transforms, namespacing, mounted skill sources, and proxies are not supported. Custom middleware that changes resource content must also update the corresponding manifests; otherwise it is incompatible with this experiment.
 
-The existing [Skills Provider](/servers/providers/skills) remains available for ordinary resource publication. Removing the extension registration disables standard skills discovery while the experimental provider continues serving resources.
+Without `experimental_skills=True`, the [Skills Provider](/servers/providers/skills) keeps its existing behavior, including permissive frontmatter, synthetic `_manifest` resources, first-root duplicate precedence, and the `reload` setting. Opting in enables strict validation, nested skill identities, duplicate rejection, and live byte-preserving reads. The protocol manifests replace the synthetic `_manifest` resource in this mode, and the main file must be `SKILL.md`. Experimental reads are always live, regardless of `reload`.
+
+Removing the extension registration disables standard skills discovery while the provider continues serving resources in its selected mode.

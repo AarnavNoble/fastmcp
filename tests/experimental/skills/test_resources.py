@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from fastmcp.experimental.skills._resources import read_file
+from fastmcp.skills._resources import read_file
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="requires named pipes")

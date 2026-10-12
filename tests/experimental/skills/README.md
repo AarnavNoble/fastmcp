@@ -2,7 +2,9 @@
 
 This experiment targets the stable Skills extension at
 `modelcontextprotocol/ext-skills@167da6c` and builds on FastMCP PR #5057.
-It provides filesystem publication and standard discovery. It does not implement
+It opts the existing `SkillsDirectoryProvider` into filesystem publication and
+standard discovery through `experimental_skills=True` and the single
+`SkillsExtension`. It does not implement
 host activation or the optional directory-read method.
 
 The upstream conformance runner at
@@ -25,7 +27,7 @@ scenario passed wire validation and skipped optional directory checks because
 `directoryRead` is not advertised.
 
 Local protocol tests cover both supporting-file publication modes, nested
-skills, binary data, authorization, URI aliases, resource shadowing, duplicate
+skills, binary data, component and global middleware authorization, URI aliases, resource shadowing, duplicate
 identities, malformed frontmatter, cache refresh, and nonregular files. Snapshot
 tests also verify duplicate YAML keys, recursive aliases, JSON-incompatible
 values, raw byte digests, symlinks, and unreadable path rejection.
