@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -22,7 +23,7 @@ def test_snapshot_preserves_raw_bytes_and_frontmatter(tmp_path: Path):
         "values": [None, 1.5, "text"],
     }
     assert isinstance(entry.resources, list)
-    assert [(r.uri, r.size, r.digest) for r in entry.resources] == [
+    assert sorted((r.uri, r.size, r.digest) for r in entry.resources) == [
         (
             f"skill://team/review/{name}",
             len(content),
@@ -76,6 +77,9 @@ def test_snapshot_rejects_symlinks(tmp_path: Path, directory: bool):
         snapshot(root, "review")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Colon paths are NTFS streams on Windows"
+)
 def test_rejects_paths_not_supported_by_resource_reader(tmp_path: Path):
     (tmp_path / "SKILL.md").write_text(
         "---\nname: review\ndescription: Review code\n---\n"

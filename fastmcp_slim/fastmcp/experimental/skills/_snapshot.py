@@ -55,7 +55,7 @@ def parse_frontmatter(content: bytes) -> SkillFrontmatter:
     match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", text, re.DOTALL)
     if match is None:
         raise ValueError("SKILL.md must begin with YAML frontmatter")
-    value = yaml.load(match.group(1), Loader=_FrontmatterLoader)
+    value = yaml.load(match.group(1), Loader=_FrontmatterLoader)  # noqa: S506 - SafeLoader subclass rejects duplicate keys
     if not isinstance(value, dict):
         raise ValueError("frontmatter must be a mapping")
     _validate_json(value, set())
