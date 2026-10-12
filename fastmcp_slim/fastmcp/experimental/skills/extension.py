@@ -61,7 +61,14 @@ class SkillsExtension(BaseSkillsExtension):
         self, context: ServerRequestContext[Any, Any], params: GetSkillParams
     ) -> GetSkillResult:
         async with Context(fastmcp=self.server):
-            if params.uri in self._colliding_uris():
+            matches = 0
+            for provider in self._providers:
+                if not isinstance(provider, SkillsDirectoryProvider):
+                    continue
+                parts = provider._uri_parts(params.uri)
+                if parts is not None and parts[-1] == "SKILL.md":
+                    matches += len(provider._directories_for_name("/".join(parts[:-1])))
+            if matches > 1:
                 raise MCPError(
                     code=INVALID_PARAMS, message=f"Unknown skill URI: {params.uri}"
                 )

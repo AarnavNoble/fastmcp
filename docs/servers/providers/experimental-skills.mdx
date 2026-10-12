@@ -67,7 +67,7 @@ async def inspect_skills() -> None:
 
 ## Validation and updates
 
-Discovery scans the directories and hashes their current bytes. Reads remain live, preserving CRLF newlines and binary content. If a file changes between discovery and reading, the host detects the mismatch and refreshes the entry. This is a point-in-time manifest, not an atomic filesystem snapshot.
+Listing scans the directories and hashes their current bytes. Looking up a skill by URI hashes only that skill; resource reads resolve their path directly without scanning the skill collection. Reads remain live, preserving CRLF newlines and binary content. If a file changes between discovery and reading, the host detects the mismatch and refreshes the entry. This is a point-in-time manifest, not an atomic filesystem snapshot.
 
 Malformed skills are omitted with a warning. Duplicate root-relative skill paths are all omitted. Frontmatter must have unique string keys and JSON-compatible values; timestamps, binary scalars, non-finite numbers, and recursive aliases are rejected. Skill roots and their contents must not be symbolic links.
 

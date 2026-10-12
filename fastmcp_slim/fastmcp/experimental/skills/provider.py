@@ -12,6 +12,7 @@ from urllib.parse import quote, unquote
 import yaml
 from anyio.to_thread import run_sync
 from mcp.server.context import ServerRequestContext
+from mcp.shared.path_security import PathEscapeError, safe_join
 from pydantic import AnyUrl
 
 from fastmcp.experimental.skills._resources import SkillFileResource, SkillFileTemplate
@@ -114,39 +115,70 @@ class SkillsDirectoryProvider(Provider):
                     resources[uri] = self._resource(uri, path, root, snap.entry)
         return list(resources.values())
 
+    def _directories_for_name(self, name: str) -> list[Path]:
+        directories = []
+        for root in self._roots:
+            try:
+                directory = safe_join(root, name)
+            except (PathEscapeError, OSError, RuntimeError):
+                continue
+            lexical = root / name
+            if any(
+                path.is_symlink()
+                for path in (lexical, *lexical.parents)
+                if path == root or root in path.parents
+            ):
+                continue
+            if (directory / "SKILL.md").is_file():
+                directories.append(lexical)
+        return directories
+
+    def _uri_parts(self, uri: str) -> list[str] | None:
+        if not uri.startswith("skill://"):
+            return None
+        encoded = uri[len("skill://") :]
+        decoded = unquote(encoded)
+        parts = decoded.split("/")
+        if (
+            quote(decoded, safe="/") != encoded
+            or len(parts) < 2
+            or any(part in {"", ".", ".."} for part in parts)
+            or "\\" in decoded
+        ):
+            return None
+        return parts
+
+    def _resolve_file(self, uri: str) -> tuple[Path, str] | None:
+        parts = self._uri_parts(uri)
+        if parts is None:
+            return None
+        for length in range(len(parts) - 1, 0, -1):
+            directories = self._directories_for_name("/".join(parts[:length]))
+            if len(directories) > 1:
+                return None
+            if directories:
+                return directories[0], "/".join(parts[length:])
+        return None
+
     async def _get_resource(
         self, uri: str, version: VersionSpec | None = None
     ) -> Resource | None:
-        for name, root in sorted(
-            self._directories(), key=lambda item: len(item[0]), reverse=True
-        ):
-            prefix = f"skill://{quote(name, safe='/')}/"
-            if not uri.startswith(prefix):
-                continue
-            relative = unquote(uri[len(prefix) :])
-            if quote(relative, safe="/") != uri[len(prefix) :]:
-                continue
-            if relative != "SKILL.md" and self._supporting_files != "resources":
-                continue
-            parts = relative.split("/")
-            if (
-                not parts
-                or any(part in {"", ".", ".."} for part in parts)
-                or Path(relative).is_absolute()
-            ):
-                return None
-            path = root / relative
-            if not path.is_file():
-                return None
-            return SkillFileResource(
-                uri=AnyUrl(uri),
-                name=root.name if relative == "SKILL.md" else path.name,
-                mime_type=mimetypes.guess_type(path.name)[0]
-                or "application/octet-stream",
-                root=root,
-                relative_path=relative,
-            )
-        return None
+        resolved = self._resolve_file(uri)
+        if resolved is None:
+            return None
+        root, relative = resolved
+        if relative != "SKILL.md" and self._supporting_files != "resources":
+            return None
+        path = root / relative
+        if not path.is_file():
+            return None
+        return SkillFileResource(
+            uri=AnyUrl(uri),
+            name=root.name if relative == "SKILL.md" else path.name,
+            mime_type=mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+            root=root,
+            relative_path=relative,
+        )
 
     async def _list_resource_templates(self) -> Sequence[ResourceTemplate]:
         if self._supporting_files != "template":
@@ -168,26 +200,25 @@ class SkillsDirectoryProvider(Provider):
     async def _get_resource_template(
         self, uri: str, version: VersionSpec | None = None
     ) -> ResourceTemplate | None:
-        if any(
-            uri == f"skill://{quote(name, safe='/')}/SKILL.md"
-            for name, _ in self._directories()
-        ):
+        if self._supporting_files != "template":
             return None
-        for template in sorted(
-            await self._list_resource_templates(),
-            key=lambda t: len(t.uri_template),
-            reverse=True,
-        ):
-            params = template.matches(uri)
-            if params is not None:
-                if any(part in {"", ".", ".."} for part in params["path"].split("/")):
-                    continue
-                canonical = template.uri_template.replace(
-                    "{path*}", quote(params["path"], safe="/")
-                )
-                if canonical == uri:
-                    return template
-        return None
+        resolved = self._resolve_file(uri)
+        if resolved is None:
+            return None
+        root, relative = resolved
+        if relative == "SKILL.md":
+            return None
+        prefix = uri[: -len(quote(relative, safe="/"))]
+        return SkillFileTemplate(
+            uri_template=f"{prefix}{{path*}}",
+            name=f"{root.name}_files",
+            root=root,
+            parameters={
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+            },
+        )
 
     async def _visible_entry(self, snap: Snapshot) -> Skill | None:
         server = get_context().fastmcp
@@ -221,13 +252,23 @@ class SkillsDirectoryProvider(Provider):
     async def _get_skill_entry(
         self, uri: str, context: ServerRequestContext[Any, Any]
     ) -> Skill | None:
-        for snap in await run_sync(self._snapshots):
-            if snap.entry.uri == uri:
-                return await self._visible_entry(snap)
-        return None
+        parts = self._uri_parts(uri)
+        if parts is None or parts[-1] != "SKILL.md":
+            return None
+        name = "/".join(parts[:-1])
+        directories = self._directories_for_name(name)
+        if len(directories) != 1:
+            return None
+        try:
+            snap = await run_sync(snapshot, directories[0], name)
+        except (OSError, ValueError, yaml.YAMLError, RecursionError) as exc:
+            logger.warning("Omitting invalid skill %s: %s", directories[0], exc)
+            return None
+        return await self._visible_entry(snap)
 
     def claims_uri(self, uri: str) -> bool:
-        return any(
-            uri.startswith(f"skill://{quote(name, safe='/')}/")
-            for name, _ in self._candidate_directories()
+        parts = self._uri_parts(uri)
+        return parts is not None and any(
+            self._directories_for_name("/".join(parts[:length]))
+            for length in range(len(parts) - 1, 0, -1)
         )

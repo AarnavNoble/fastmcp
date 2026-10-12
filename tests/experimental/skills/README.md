@@ -29,3 +29,9 @@ skills, binary data, authorization, URI aliases, resource shadowing, duplicate
 identities, malformed frontmatter, cache refresh, and nonregular files. Snapshot
 tests also verify duplicate YAML keys, recursive aliases, JSON-incompatible
 values, raw byte digests, symlinks, and unreadable path rejection.
+
+Lookup scaling tests instrument real filesystem operations in both publication
+modes. Listing visits the collection twice and scans each skill twice, independent
+of its number of supporting files. A single lookup scans and hashes only the
+requested skill, and a resource read performs no recursive scans. The tests also
+verify that a newly added skill is immediately addressable.
