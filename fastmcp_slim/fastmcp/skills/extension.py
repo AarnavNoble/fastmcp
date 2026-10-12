@@ -74,6 +74,10 @@ class SkillsExtension(ServerExtension):
     def _sources(self) -> tuple[_SkillSource, ...]:
         return cast("tuple[_SkillSource, ...]", self._providers)
 
+    def owns_resource_uri(self, uri: str) -> bool:
+        """Whether this extension requires live reads for a resource URI."""
+        return False
+
     def methods(self) -> Sequence[MethodBinding]:
         return (
             MethodBinding(
