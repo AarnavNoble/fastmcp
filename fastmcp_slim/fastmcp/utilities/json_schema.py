@@ -618,6 +618,19 @@ _SUBSCHEMA_VALUE_KEYS = frozenset(
 _SUBSCHEMA_LIST_KEYS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
 
 
+def _referenced_def_name(ref: str) -> str:
+    """Return the `$defs` entry a `#/$defs/...` reference points into.
+
+    The entry is the pointer segment right after `$defs`, decoded the way
+    `_resolve_local_ref` decodes it. A pointer can continue past that segment
+    (`#/$defs/Address/properties/city`) and can escape characters in the name
+    (`#/$defs/A~1B`, `#/$defs/A%20B`); either way the reference still needs
+    that entry to resolve.
+    """
+    segment = unquote(ref[len("#/$defs/") :]).split("/")[0]
+    return segment.replace("~1", "/").replace("~0", "~")
+
+
 def _single_pass_optimize(
     schema: dict[str, Any],
     prune_titles: bool = False,
@@ -719,7 +732,7 @@ def _single_pass_optimize(
             if prune_defs:
                 ref = node.get("$ref")
                 if isinstance(ref, str) and ref.startswith("#/$defs/"):
-                    referenced_def = ref.split("/")[-1]
+                    referenced_def = _referenced_def_name(ref)
                     if current_def_name:
                         # We're inside a $def, so this is a def->def reference
                         def_dependencies[referenced_def].append(current_def_name)

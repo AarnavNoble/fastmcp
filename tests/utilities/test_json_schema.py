@@ -496,6 +496,77 @@ class TestCompressSchema:
             node = node["items"]
         assert node == {"$ref": "#/$defs/Leaf"}
 
+    @pytest.mark.parametrize(
+        ("def_name", "ref"),
+        [
+            ("Address", "#/$defs/Address/properties/city"),
+            ("A/B", "#/$defs/A~1B"),
+            ("A~B", "#/$defs/A~0B"),
+            ("A B", "#/$defs/A%20B"),
+        ],
+    )
+    def test_keeps_defs_referenced_by_longer_or_escaped_pointers(
+        self, def_name: str, ref: str
+    ):
+        """A `$ref` names its definition in the segment after `$defs`, which
+        can be escaped and need not be the last one. Reading the last segment
+        raw made the definition look unused, so it was dropped and the `$ref`
+        was left dangling."""
+        schema = {
+            "type": "object",
+            "properties": {"value": {"$ref": ref}},
+            "$defs": {
+                def_name: {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                },
+                "Unused": {"type": "integer"},
+            },
+        }
+
+        result = compress_schema(schema)
+
+        assert result["$defs"] == {def_name: schema["$defs"][def_name]}
+
+    def test_def_named_like_a_pointer_tail_is_not_kept_in_place_of_the_target(self):
+        """The last pointer segment is a location inside the definition, not a
+        definition name, so an unrelated entry with that name stays unused."""
+        schema = {
+            "type": "object",
+            "properties": {"value": {"$ref": "#/$defs/Address/properties/city"}},
+            "$defs": {
+                "Address": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                },
+                "city": {"type": "integer"},
+            },
+        }
+
+        result = compress_schema(schema)
+
+        assert list(result["$defs"]) == ["Address"]
+
+    def test_keeps_defs_referenced_through_another_def_by_pointer(self):
+        schema = {
+            "type": "object",
+            "properties": {"value": {"$ref": "#/$defs/Outer"}},
+            "$defs": {
+                "Outer": {
+                    "type": "object",
+                    "properties": {"city": {"$ref": "#/$defs/Inner/properties/city"}},
+                },
+                "Inner": {
+                    "type": "object",
+                    "properties": {"city": {"type": "string"}},
+                },
+            },
+        }
+
+        result = compress_schema(schema)
+
+        assert set(result["$defs"]) == {"Outer", "Inner"}
+
     def test_preserves_refs_by_default(self):
         """Test that compress_schema preserves $refs by default."""
         schema = {
