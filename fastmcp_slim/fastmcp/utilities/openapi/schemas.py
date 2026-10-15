@@ -762,58 +762,58 @@ def _combine_schemas_and_map_params(
             result["$defs"] = schema_defs
 
     if route.openapi_version and route.openapi_version.startswith("3"):
-        result = _convert_input_schema(result, parameter_map, route.openapi_version)
+        result = _convert_input_schema(result, set(body_props), route.openapi_version)
 
     return result, parameter_map
 
 
 def _convert_input_schema(
-    schema: dict[str, Any],
-    parameter_map: dict[str, dict[str, str]],
-    openapi_version: str,
+    schema: dict[str, Any], body_property_names: set[str], openapi_version: str
 ) -> dict[str, Any]:
     """Convert a combined tool input schema to JSON Schema.
 
-    readOnly properties are removed from the request body, including inside
-    referenced component schemas: the server sets them, so a request does not
-    send them, and OpenAPI applies their ``required`` entries to responses only.
-    Path, query, header and cookie parameters are converted without that
-    filter, so a parameter whose schema is marked readOnly stays an argument.
+    readOnly properties are removed: the server sets them, so a request does
+    not send them, and OpenAPI applies their ``required`` entries to responses
+    only. readOnly describes a property of an object, so at the top level only
+    the request body properties flattened into arguments (``body_property_names``)
+    can be removed. Parameters and a whole-body argument stay arguments even
+    when their own schema is marked readOnly; the objects inside them, and the
+    component schemas in ``$defs``, lose their readOnly properties.
     """
     properties = schema["properties"]
-    body_names = {
-        name
-        for name, info in parameter_map.items()
-        if info["location"] == "body" and name in properties
-    }
     definitions = schema.get("$defs")
 
-    params = convert_openapi_schema_to_json_schema(
-        {"properties": {k: v for k, v in properties.items() if k not in body_names}},
-        openapi_version,
-    )
-    body_part: dict[str, Any] = {
-        "properties": {k: v for k, v in properties.items() if k in body_names},
-        "required": [name for name in schema["required"] if name in body_names],
-    }
-    if definitions is not None:
-        body_part["$defs"] = definitions
-    body = convert_openapi_schema_to_json_schema(
-        body_part, openapi_version, remove_read_only=True, definitions=definitions
-    )
+    def convert(sub_schema: Any) -> Any:
+        return convert_openapi_schema_to_json_schema(
+            sub_schema, openapi_version, remove_read_only=True, definitions=definitions
+        )
 
-    converted = {**params["properties"], **body["properties"]}
+    body = convert(
+        {
+            "properties": {
+                k: v for k, v in properties.items() if k in body_property_names
+            },
+            "required": [n for n in schema["required"] if n in body_property_names],
+        }
+    )
+    converted = {
+        name: body["properties"][name]
+        if name in body_property_names
+        else convert(prop_schema)
+        for name, prop_schema in properties.items()
+        if name not in body_property_names or name in body["properties"]
+    }
     result: dict[str, Any] = {
         "type": "object",
-        "properties": {k: converted[k] for k in properties if k in converted},
+        "properties": converted,
         "required": [
             name
             for name in schema["required"]
-            if name not in body_names or name in body.get("required", [])
+            if name not in body_property_names or name in body.get("required", [])
         ],
     }
-    if "$defs" in body:
-        result["$defs"] = body["$defs"]
+    if definitions is not None:
+        result["$defs"] = {name: convert(d) for name, d in definitions.items()}
     return result
 
 

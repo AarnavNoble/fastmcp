@@ -126,7 +126,9 @@ async def test_whole_body_argument_omits_read_only_properties():
     spec["paths"]["/owners/{owner_id}/pets"]["post"]["requestBody"]["content"][
         "application/json"
     ]["schema"] = {"type": "array", "items": {"$ref": "#/components/schemas/Pet"}}
-    server = FastMCP.from_openapi(spec, client=httpx2.AsyncClient(base_url="http://test"))
+    server = FastMCP.from_openapi(
+        spec, client=httpx2.AsyncClient(base_url="http://test")
+    )
     async with Client(server) as client:
         tool = (await client.list_tools())[0]
 
@@ -136,3 +138,51 @@ async def test_whole_body_argument_omits_read_only_properties():
     assert list(pet["properties"]) == ["name", "tag"]
     assert pet["required"] == ["name", "tag"]
     assert list(pet["properties"]["tag"]["properties"]) == ["label"]
+
+
+async def test_body_typed_by_read_only_component_stays_an_argument():
+    # readOnly applies to properties; a body that reuses a readOnly component
+    # as its root schema is still the request payload.
+    spec = pet_spec("3.0.3")
+    spec["paths"]["/owners/{owner_id}/pets"]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"] = {"$ref": "#/components/schemas/Id"}
+    server = FastMCP.from_openapi(
+        spec, client=httpx2.AsyncClient(base_url="http://test")
+    )
+    async with Client(server) as client:
+        tool = (await client.list_tools())[0]
+
+    inputs = tool.input_schema
+    assert list(inputs["properties"]) == ["owner_id", "body"]
+    assert inputs["properties"]["body"] == {"type": "integer"}
+    assert inputs["required"] == ["owner_id", "body"]
+
+
+async def test_object_parameter_omits_nested_read_only_properties():
+    spec = pet_spec("3.0.3")
+    spec["paths"]["/owners/{owner_id}/pets"]["post"]["parameters"].append(
+        {
+            "name": "filter",
+            "in": "query",
+            "style": "deepObject",
+            "explode": True,
+            "schema": {
+                "type": "object",
+                "required": ["id", "q"],
+                "properties": {
+                    "id": {"type": "integer", "readOnly": True},
+                    "q": {"type": "string"},
+                },
+            },
+        }
+    )
+    server = FastMCP.from_openapi(
+        spec, client=httpx2.AsyncClient(base_url="http://test")
+    )
+    async with Client(server) as client:
+        tool = (await client.list_tools())[0]
+
+    query_filter = tool.input_schema["properties"]["filter"]
+    assert list(query_filter["properties"]) == ["q"]
+    assert query_filter["required"] == ["q"]
