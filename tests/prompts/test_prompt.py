@@ -668,6 +668,24 @@ class TestPromptArgumentDescriptions:
         assert mcp_prompt.meta is not None
         assert meta_data.items() <= mcp_prompt.meta.items()
 
+    def test_argument_title_in_mcp_prompt(self):
+        """An argument's title is advertised in the MCP prompt."""
+        from fastmcp.prompts.base import PromptArgument
+
+        def test_prompt(name: str) -> str:
+            return f"Hello, {name}!"
+
+        prompt = Prompt.from_function(test_prompt).model_copy(
+            update={
+                "arguments": [
+                    PromptArgument(name="name", title="Your name", required=True)
+                ]
+            }
+        )
+
+        (argument,) = prompt.to_mcp_prompt().arguments or []
+        assert argument.title == "Your name"
+
 
 class TestMessage:
     def test_message_string_content(self):
