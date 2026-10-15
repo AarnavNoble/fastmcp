@@ -668,23 +668,23 @@ class TestPromptArgumentDescriptions:
         assert mcp_prompt.meta is not None
         assert meta_data.items() <= mcp_prompt.meta.items()
 
-    def test_argument_title_in_mcp_prompt(self):
-        """An argument's title is advertised in the MCP prompt."""
-        from fastmcp.prompts.base import PromptArgument
+    def test_argument_titles_from_field(self):
+        """An explicit Field(title=...) becomes the argument's MCP title."""
+        from pydantic import Field
 
-        def test_prompt(name: str) -> str:
+        def test_prompt(
+            name: Annotated[str, Field(title="Your name")],
+            tone: str = Field(default="playful", title="Tone of voice"),
+            topic: str = "dogs",
+        ) -> str:
             return f"Hello, {name}!"
 
-        prompt = Prompt.from_function(test_prompt).model_copy(
-            update={
-                "arguments": [
-                    PromptArgument(name="name", title="Your name", required=True)
-                ]
-            }
-        )
-
-        (argument,) = prompt.to_mcp_prompt().arguments or []
-        assert argument.title == "Your name"
+        arguments = Prompt.from_function(test_prompt).to_mcp_prompt().arguments or []
+        assert {arg.name: arg.title for arg in arguments} == {
+            "name": "Your name",
+            "tone": "Tone of voice",
+            "topic": None,
+        }
 
 
 class TestMessage:
