@@ -161,28 +161,37 @@ async def test_body_typed_by_read_only_component_stays_an_argument():
 
 async def test_object_parameter_omits_nested_read_only_properties():
     spec = pet_spec("3.0.3")
-    spec["paths"]["/owners/{owner_id}/pets"]["post"]["parameters"].append(
-        {
-            "name": "filter",
-            "in": "query",
-            "style": "deepObject",
-            "explode": True,
-            "schema": {
-                "type": "object",
-                "required": ["id", "q"],
-                "properties": {
-                    "id": {"type": "integer", "readOnly": True},
-                    "q": {"type": "string"},
-                },
-            },
-        }
-    )
+    filter_schema = {
+        "type": "object",
+        "required": ["id", "q"],
+        "properties": {
+            "id": {"type": "integer", "readOnly": True},
+            "q": {"type": "string"},
+        },
+    }
+    spec["components"]["schemas"]["Filter"] = filter_schema
+    # The same object inline and as a component $ref.
+    for name, schema in [
+        ("filter", filter_schema),
+        ("ref_filter", {"$ref": "#/components/schemas/Filter"}),
+    ]:
+        spec["paths"]["/owners/{owner_id}/pets"]["post"]["parameters"].append(
+            {
+                "name": name,
+                "in": "query",
+                "style": "deepObject",
+                "explode": True,
+                "schema": schema,
+            }
+        )
     server = FastMCP.from_openapi(
         spec, client=httpx2.AsyncClient(base_url="http://test")
     )
     async with Client(server) as client:
         tool = (await client.list_tools())[0]
 
-    query_filter = tool.input_schema["properties"]["filter"]
+    inputs = tool.input_schema
+    query_filter = inputs["properties"]["filter"]
     assert list(query_filter["properties"]) == ["q"]
     assert query_filter["required"] == ["q"]
+    assert inputs["properties"]["ref_filter"] == query_filter
